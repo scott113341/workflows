@@ -19,6 +19,10 @@ on:
         description: The OCI registry user's password
         required: true
 
+env:
+  DOCKER_BUILDKIT: "1"
+  IMAGE_BASE: ${{ inputs.registry }}/${{ inputs.repository }}
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -36,12 +40,12 @@ jobs:
       - name: Build image (${{ steps.compute_tag.outputs.tag }})
         run: >-
           docker build
-          -t ${{ inputs.registry }}/${{ inputs.repository }}:latest
-          -t ${{ inputs.registry }}/${{ inputs.repository }}:${{ steps.compute_tag.outputs.tag }}
-          --cache-from ${{ inputs.registry }}/${{ inputs.repository }}:latest
+          -t ${{ env.IMAGE_BASE }}:latest
+          -t ${{ env.IMAGE_BASE }}:${{ steps.compute_tag.outputs.tag }}
+          --cache-from ${{ env.IMAGE_BASE }}:latest
           --build-arg BUILDKIT_INLINE_CACHE=1
           .
-        env:
-          DOCKER_BUILDKIT: "1"
       - name: Push image
-        run: docker push --all-tags ${{ inputs.registry }}/${{ inputs.repository }}
+        run: docker push --all-tags ${{ env.IMAGE_BASE }}
+      - name: Output summary
+        run: echo '${{ env.IMAGE_BASE }}:${{ steps.compute_tag.outputs.tag }}' >> $GITHUB_STEP_SUMMARY
