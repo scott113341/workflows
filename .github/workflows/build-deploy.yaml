@@ -30,11 +30,14 @@ jobs:
           registry: ${{ inputs.registry }}
           username: ${{ secrets.registry-user }}
           password: ${{ secrets.registry-password }}
-      - name: Build image
+      - name: Compute version tag
+        id: compute_tag
+        run: echo "tag=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - name: Build image (${{ steps.compute_tag.outputs.tag }})
         run: >-
           docker build
           -t ${{ inputs.registry }}/${{ inputs.repository }}:latest
-          -t ${{ inputs.registry }}/${{ inputs.repository }}:$(date +%s)
+          -t ${{ inputs.registry }}/${{ inputs.repository }}:${{ steps.compute_tag.outputs.tag }}
           --cache-from ${{ inputs.registry }}/${{ inputs.repository }}:latest
           --build-arg BUILDKIT_INLINE_CACHE=1
           .
