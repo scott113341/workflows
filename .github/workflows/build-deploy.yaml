@@ -49,7 +49,12 @@ jobs:
           tags: |
             ${{ env.IMAGE_BASE }}:latest
             ${{ env.IMAGE_BASE }}:${{ steps.compute_tag.outputs.tag }}
-          cache-from: type=registry,ref=${{ env.IMAGE_BASE }}:latest
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE_BASE }}:latest
+            type=gha,scope=docker-build
+          cache-to: |
+            type=registry,ref=${{ env.IMAGE_BASE }}:latest,mode=max
+            type=gha,scope=docker-build,mode=max
           pull: true
           outputs: type=oci,dest=./image.tar
       - name: Output summary
