@@ -1,0 +1,47 @@
+name: Update .ruby-version
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-ruby-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest stable Ruby version
+        id: latest-ruby
+        run: |
+          ruby -e '
+            require "net/http"
+            require "yaml"
+            uri = URI("https://raw.githubusercontent.com/ruby/www.ruby-lang.org/master/_data/downloads.yml")
+            downloads = YAML.safe_load(Net::HTTP.get(uri))
+            version = downloads["stable"].first
+            puts "version=#{version}"
+          ' >> $GITHUB_OUTPUT
+
+      - name: Check current Ruby version
+        id: current-ruby
+        run: |
+          CURRENT_VERSION=$(cat .ruby-version)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Write latest version to .ruby-version
+        run: |
+          CURRENT_VERSION=$(cat .ruby-version)
+          echo "${{ steps.latest-ruby.outputs.version }}" > .ruby-version
+
+      - name: Create pull request
+        if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
+          commit-message: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
+          branch: update-ruby-to-${{ steps.latest-ruby.outputs.version }}
+          delete-branch: true
+          base: main
