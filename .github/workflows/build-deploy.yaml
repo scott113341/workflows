@@ -18,6 +18,9 @@ on:
       registry-password:
         description: The OCI registry user's password
         required: true
+      build-args:
+        description: Docker build args
+        required: false
 
 env:
   IMAGE_BASE: ${{ inputs.registry }}/${{ inputs.repository }}
@@ -49,6 +52,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_BASE }}:latest
             ${{ env.IMAGE_BASE }}:${{ steps.compute_tag.outputs.tag }}
+          build-args: ${{ secrets.build-args }}
           cache-from: type=gha,scope=docker-build
           cache-to: type=gha,scope=docker-build,mode=max
           outputs: type=oci,dest=./image.tar
