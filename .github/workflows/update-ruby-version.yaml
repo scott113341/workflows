@@ -3,10 +3,6 @@ name: Update .ruby-version
 on:
   workflow_call:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   update-ruby-version:
     runs-on: ubuntu-latest
@@ -16,26 +12,30 @@ jobs:
       - name: Get latest stable Ruby version
         id: latest-ruby
         run: |
-          ruby -e '
+          LATEST_VERSION=$(ruby -e '
             require "net/http"
             require "yaml"
             uri = URI("https://raw.githubusercontent.com/ruby/www.ruby-lang.org/master/_data/downloads.yml")
             downloads = YAML.safe_load(Net::HTTP.get(uri))
             version = downloads["stable"].first
-            puts "version=#{version}"
-          ' >> $GITHUB_OUTPUT
+            puts version
+          ')
+          echo "Version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check current Ruby version
         id: current-ruby
         run: |
           CURRENT_VERSION=$(cat .ruby-version)
+          echo "Version: $CURRENT_VERSION"
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Write latest version to .ruby-version
         run: |
-          CURRENT_VERSION=$(cat .ruby-version)
           echo "${{ steps.latest-ruby.outputs.version }}" > .ruby-version
 
+      # If this fails, go to the repo's Settings -> Actions -> General -> Workflow permissions, and check the box
+      # that allows GitHub Actions to create PRs
       - name: Create pull request
         if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
         uses: peter-evans/create-pull-request@v7
