@@ -61,6 +61,8 @@ jobs:
             end
           '
 
+      - uses: ruby/setup-ruby@v1
+
       - name: Update bundle
         run: bundle install
 
