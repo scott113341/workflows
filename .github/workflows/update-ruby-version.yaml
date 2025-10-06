@@ -59,7 +59,7 @@ jobs:
               file_content.gsub!(current_version, latest_version)
               File.write(file, file_content)
             end
-          ')
+          '
 
       - name: Update bundle
         run: bundle install
