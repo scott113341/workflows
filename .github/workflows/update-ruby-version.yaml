@@ -2,6 +2,12 @@ name: Update .ruby-version
 
 on:
   workflow_call:
+    inputs:
+      additional_paths:
+        description: Additional file paths to check for Ruby version
+        required: false
+        type: string
+        default: ""
 
 jobs:
   update-ruby-version:
@@ -34,14 +40,42 @@ jobs:
         run: |
           echo "${{ steps.latest-ruby.outputs.version }}" > .ruby-version
 
+      - name: Write latest version to additional_paths
+        id: latest-ruby
+        run: |
+          ruby -e '
+            current_version = "${{ steps.current-ruby.outputs.version }}"
+            latest_version = "${{ steps.latest-ruby.outputs.version }}"
+            files = "${{ inputs.additional_paths }}".split("\n").map(&:strip).reject(&:empty?)
+            
+            if files.any?
+              puts("Also checking additional_paths:")
+              pp(files)
+            else
+              puts("No additional_paths specified")
+            end
+            
+            files.each do |file|
+              file_content = File.read(file)
+              file_content.gsub!(current_version, latest_version)
+              File.write(file, file_content)
+            end
+          ')
+
+      - name: Generate branch name
+        id: branch-name
+        run: |
+          TZ="America/Denver" DATE=$(date +"%Y%m%d")
+          echo "branch-name=$DATE/update-ruby-to-${{ steps.latest-ruby.outputs.version }}" >> $GITHUB_OUTPUT
+
       # If this fails, go to the repo's Settings -> Actions -> General -> Workflow permissions, and check the box
       # that allows GitHub Actions to create PRs
       - name: Create pull request
         if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
         uses: peter-evans/create-pull-request@v7
         with:
-          title: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
+          title: "Update Ruby to ${{ steps.latest-ruby.outputs.version }}"
           commit-message: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
-          branch: update-ruby-to-${{ steps.latest-ruby.outputs.version }}
+          branch: ${{ steps.branch-name.outputs.branch-name }}
           delete-branch: true
           base: main
