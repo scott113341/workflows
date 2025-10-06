@@ -41,7 +41,6 @@ jobs:
           echo "${{ steps.latest-ruby.outputs.version }}" > .ruby-version
 
       - name: Write latest version to additional_paths
-        id: latest-ruby
         run: |
           ruby -e '
             current_version = "${{ steps.current-ruby.outputs.version }}"
