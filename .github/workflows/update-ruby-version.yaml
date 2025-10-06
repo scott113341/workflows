@@ -62,6 +62,9 @@ jobs:
             end
           ')
 
+      - name: Update bundle
+        run: bundle install
+
       - name: Generate branch name
         id: branch-name
         run: |
