@@ -21,10 +21,11 @@ jobs:
           LATEST_VERSION=$(ruby -e '
             require "net/http"
             require "yaml"
+            
             uri = URI("https://raw.githubusercontent.com/ruby/www.ruby-lang.org/master/_data/downloads.yml")
             downloads = YAML.safe_load(Net::HTTP.get(uri))
             version = downloads["stable"].first
-            puts version
+            puts(version)
           ')
           echo "Version: $LATEST_VERSION"
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
@@ -63,8 +64,11 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
 
-      - name: Update bundle
-        run: bundle install
+      - name: Update Bundler version
+        run: bundle update --bundler
+
+      - name: Update Ruby version in bundle lockfile
+        run: bundle update --ruby
 
       - name: Generate branch name
         id: branch-name
@@ -83,3 +87,4 @@ jobs:
           branch: ${{ steps.branch-name.outputs.branch-name }}
           delete-branch: true
           base: main
+          body: "https://www.ruby-lang.org/en/downloads/releases/"
