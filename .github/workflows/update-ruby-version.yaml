@@ -80,7 +80,7 @@ jobs:
       # that allows GitHub Actions to create PRs
       - name: Create pull request
         if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           title: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
           commit-message: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
