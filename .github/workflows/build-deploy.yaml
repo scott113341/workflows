@@ -43,7 +43,7 @@ jobs:
         id: compute_tag
         run: echo "tag=$(date +%s)" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build and push image (${{ steps.compute_tag.outputs.tag }})
         uses: docker/build-push-action@v6
         env:
