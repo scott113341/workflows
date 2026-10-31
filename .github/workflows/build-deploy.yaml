@@ -76,5 +76,5 @@ jobs:
             (.layers | map(.size) | add) as $size
             | if $size >= 1073741824 then "\($size / 1073741824 * 100 | round / 100) GiB"
               else "\($size / 1048576 * 100 | round / 100) MiB" end
-            | "", "**Image size (compressed):** \(.)"
+            | "", "Image size (compressed): \(.)"
           ' <<< "$manifest" >> $GITHUB_STEP_SUMMARY
