@@ -76,12 +76,21 @@ jobs:
           TZ="America/Denver" DATE=$(date +"%Y%m%d")
           echo "branch-name=$DATE/update-ruby-to-${{ steps.latest-ruby.outputs.version }}" >> $GITHUB_OUTPUT
 
-      # If this fails, go to the repo's Settings -> Actions -> General -> Workflow permissions, and check the box
-      # that allows GitHub Actions to create PRs
+      # PRs opened with the default GITHUB_TOKEN don't run CI until someone approves it, so open them as a GitHub App
+      # instead. The calling repo needs PR_BOT_CLIENT_ID and PR_BOT_PRIVATE_KEY secrets, passed via `secrets: inherit`
+      - name: Create GitHub App token
+        id: app-token
+        if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.PR_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.PR_BOT_PRIVATE_KEY }}
+
       - name: Create pull request
         if: steps.latest-ruby.outputs.version != steps.current-ruby.outputs.version
         uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ steps.app-token.outputs.token }}
           title: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
           commit-message: "Update Ruby from ${{ steps.current-ruby.outputs.version }} to ${{ steps.latest-ruby.outputs.version }}"
           branch: ${{ steps.branch-name.outputs.branch-name }}
