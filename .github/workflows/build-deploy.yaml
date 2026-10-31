@@ -61,3 +61,44 @@ jobs:
           outputs: type=oci,dest=./image.tar
       - name: Output summary
         run: echo '${{ env.IMAGE_BASE }}:${{ steps.compute_tag.outputs.tag }}' >> $GITHUB_STEP_SUMMARY
+      - name: Output image + layer sizes
+        # The image is already pushed by now, so a reporting failure shouldn't fail the job
+        continue-on-error: true
+        run: |
+          blob() { tar -xOf image.tar "blobs/${1/://}"; }
+
+          # Descend through the OCI index(es) to the image manifest, skipping attestation manifests
+          manifest=$(tar -xOf image.tar index.json)
+          while jq -e '.manifests' > /dev/null <<< "$manifest"; do
+            manifest=$(blob "$(jq -r 'first(.manifests[] | select(.annotations["vnd.docker.reference.type"] == null)).digest' <<< "$manifest")")
+          done
+          config=$(blob "$(jq -r '.config.digest' <<< "$manifest")")
+
+          # RUN history entries embed build arg values (`RUN |1 KEY=value /bin/sh -c ...`), which may be
+          # secret, so those are removed. If they can't be safely removed, the whole command is omitted.
+          jq -rn --argjson manifest "$manifest" --argjson config "$config" '
+            def human:
+              if . >= 1073741824 then "\(. / 1073741824 * 100 | round / 100) GiB"
+              elif . >= 1048576 then "\(. / 1048576 * 100 | round / 100) MiB"
+              elif . >= 1024 then "\(. / 1024 * 100 | round / 100) KiB"
+              else "\(.) B" end;
+            def layer_name:
+              gsub("\\s+"; " ")
+              | sub(" # buildkit$"; "")
+              | if test("^(RUN )?\\|[0-9]+ ") then
+                  if test(" /bin/sh -c ") then sub("^.*? /bin/sh -c "; "RUN ") else "RUN" end
+                else sub("^RUN /bin/sh -c "; "RUN ") end
+              | if length > 100 then .[:100] + "…" else . end
+              | gsub("`"; [39] | implode)
+              | gsub("\\|"; "\\|")
+              | "`\(.)`";
+            $manifest.layers as $layers
+            | ($config.history // [] | map(select(.empty_layer | not))) as $history
+            | "",
+              "**Image size (compressed):** \($layers | map(.size) | add | human)",
+              "",
+              "| Size | Layer |",
+              "| ---: | :---- |",
+              ($layers | to_entries[] |
+                "| \(.value.size | human) | \(if ($history | length) == ($layers | length) then ($history[.key].created_by // "" | layer_name) else "" end) |")
+          ' >> $GITHUB_STEP_SUMMARY
